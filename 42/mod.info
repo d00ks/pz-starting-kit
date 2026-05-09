@@ -3,4 +3,4 @@ id=StartingKit
 author=jarvis
 description=Grants new characters Strength 10, Fitness 10, and a Police Baton on first spawn.
 versionMin=42.0
-modversion=1.1.0
+modversion=1.2.0
