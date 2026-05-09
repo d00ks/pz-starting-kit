@@ -31,7 +31,7 @@ StartingKit/
 ├── mod.info
 └── 42/
     ├── mod.info
-    └── media/lua/server/StartingKit_Server.lua
+    └── media/lua/client/StartingKit_Client.lua
 ```
 
 ## What it does (under the hood)
@@ -46,7 +46,7 @@ StartingKit/
 
 ## Tweaking
 
-Open `42/media/lua/server/StartingKit_Server.lua` and change:
+Open `42/media/lua/client/StartingKit_Client.lua` and change:
 
 - The perks (e.g. `Perks.Sprinting`, `Perks.Nimble`).
 - The target level (replace `9` in the for-loop bound — the loop runs `for i = current_level, 9` so it ends at level 10).
