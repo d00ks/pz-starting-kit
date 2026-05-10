@@ -1,10 +1,12 @@
 -- Grants every new character 10 Strength + 10 Fitness + a Police Baton.
+-- v1.3: bump XP_DUMP to 999999. B42 rebalanced Body skills (Strength/Fitness) for the
+--       exercise system; user reports ~450k needed to hit level 10. 50k from v1.2 only
+--       crossed a few thresholds. Bumped modData flag to v3 so existing chars re-apply.
 -- v1.2: switched from LevelPerk loop to AddXP (LevelPerk was throwing on 2nd call in B42).
 --       wrapped each step in pcall so one failure doesn't take down the rest.
---       new modData flag (StartingKit_v2_applied) so existing chars re-apply.
 
-local KIT_FLAG = "StartingKit_v2_applied"
-local XP_DUMP = 50000  -- comfortably above the cumulative XP needed for level 10 (~36750)
+local KIT_FLAG = "StartingKit_v3_applied"
+local XP_DUMP = 999999  -- well above ~450k needed for B42 body skills to hit level 10
 
 local function applyKit(player)
     local md = player:getModData()
@@ -77,4 +79,4 @@ local function giveStartingKit(playerNum, player)
 end
 
 Events.OnCreatePlayer.Add(giveStartingKit)
-print("[StartingKit] hook registered (client-side, v1.2)")
+print("[StartingKit] hook registered (client-side, v1.3)")
