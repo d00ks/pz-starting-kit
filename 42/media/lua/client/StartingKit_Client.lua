@@ -1,84 +1,21 @@
--- Grants every new character 10 Strength + 10 Fitness + a Police Baton.
--- v1.4: fix item ID. The vanilla police baton is Base.Nightstick, not Base.Baton.
---       Bumped modData flag to v4 so chars who got Strength/Fitness from v1.3 still get the baton.
--- v1.3: bump XP_DUMP to 999999. B42 rebalanced Body skills (Strength/Fitness) for the
---       exercise system; ~450k needed to hit level 10.
--- v1.2: switched from LevelPerk loop to AddXP (LevelPerk was throwing on 2nd call in B42).
---       wrapped each step in pcall so one failure doesn't take down the rest.
+-- v1.5: switched to server-authoritative pattern. Client-side AddXP for body skills
+--       (Strength/Fitness) gets reverted by the server in B42 MP -- the server is
+--       authoritative. Now the client just requests the kit via sendClientCommand and
+--       the server handler does the real work.
+-- v1.4: fix item ID Base.Baton -> Base.Nightstick (vanilla police baton).
+-- v1.3: bump XP_DUMP to 999999 (B42 body skills need ~450k for L10).
+-- v1.2: switched from LevelPerk loop to AddXP, wrapped each step in pcall.
 
-local KIT_FLAG = "StartingKit_v4_applied"
-local XP_DUMP = 999999
-local BATON_ID = "Base.Nightstick"
+local CLIENT_FLAG = "StartingKit_v5_clientRequested"
 
-local function applyKit(player)
+local function requestKit(playerNum, player)
+    if not player or not player:isLocalPlayer() then return end
     local md = player:getModData()
-    if md[KIT_FLAG] then
-        print("[StartingKit] v2 flag set, skipping")
-        return
-    end
-    md[KIT_FLAG] = true
-
-    print("[StartingKit] applying to " .. tostring(player:getUsername()))
-
-    local xp = player:getXp()
-    if not xp then
-        print("[StartingKit] ERROR getXp() nil")
-        return
-    end
-
-    -- Strength
-    if Perks and Perks.Strength then
-        local pre = player:getPerkLevel(Perks.Strength)
-        local ok, err = pcall(function() xp:AddXP(Perks.Strength, XP_DUMP) end)
-        local post = player:getPerkLevel(Perks.Strength)
-        if ok then
-            print("[StartingKit] Strength " .. tostring(pre) .. " -> " .. tostring(post))
-        else
-            print("[StartingKit] ERROR Strength AddXP: " .. tostring(err))
-        end
-    else
-        print("[StartingKit] ERROR Perks.Strength is nil")
-    end
-
-    -- Fitness
-    if Perks and Perks.Fitness then
-        local pre = player:getPerkLevel(Perks.Fitness)
-        local ok, err = pcall(function() xp:AddXP(Perks.Fitness, XP_DUMP) end)
-        local post = player:getPerkLevel(Perks.Fitness)
-        if ok then
-            print("[StartingKit] Fitness " .. tostring(pre) .. " -> " .. tostring(post))
-        else
-            print("[StartingKit] ERROR Fitness AddXP: " .. tostring(err))
-        end
-    else
-        print("[StartingKit] ERROR Perks.Fitness is nil")
-    end
-
-    -- Baton
-    local inv = player:getInventory()
-    if inv then
-        local count = inv:getItemCount(BATON_ID)
-        if count == 0 then
-            local ok, err = pcall(function() inv:AddItem(BATON_ID) end)
-            if ok then
-                print("[StartingKit] added " .. BATON_ID)
-            else
-                print("[StartingKit] ERROR Baton AddItem: " .. tostring(err))
-            end
-        else
-            print("[StartingKit] baton already present (count=" .. tostring(count) .. ")")
-        end
-    else
-        print("[StartingKit] ERROR getInventory() nil")
-    end
+    if md[CLIENT_FLAG] then return end
+    md[CLIENT_FLAG] = true
+    sendClientCommand(player, "StartingKit", "applyKit", {})
+    print("[StartingKit] requested kit from server for " .. tostring(player:getUsername()))
 end
 
-local function giveStartingKit(playerNum, player)
-    if not player then return end
-    if not player:isLocalPlayer() then return end
-    local ok, err = pcall(applyKit, player)
-    if not ok then print("[StartingKit] FATAL: " .. tostring(err)) end
-end
-
-Events.OnCreatePlayer.Add(giveStartingKit)
-print("[StartingKit] hook registered (client-side, v1.4)")
+Events.OnCreatePlayer.Add(requestKit)
+print("[StartingKit] client hook registered (v1.5)")
