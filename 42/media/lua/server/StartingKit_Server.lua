@@ -4,7 +4,7 @@
 -- modData flag (StartingKit_v5_serverApplied) persists in players.db, so each character
 -- only gets the kit once even across reconnections. Death + reroll = new char = fresh apply.
 
-local SERVER_FLAG = "StartingKit_v5_serverApplied"
+local SERVER_FLAG = "StartingKit_v6_serverApplied"
 local XP_DUMP = 999999
 local BATON_ID = "Base.Nightstick"
 
@@ -59,10 +59,12 @@ end
 
 local function onClientCommand(module, command, player, args)
     if module ~= "StartingKit" then return end
+    print("[StartingKit-Server] received command=" .. tostring(command) ..
+          " player=" .. tostring(player and player:getUsername() or "nil"))
     if command ~= "applyKit" then return end
     local ok, err = pcall(applyKit, player)
     if not ok then print("[StartingKit-Server] FATAL: " .. tostring(err)) end
 end
 
 Events.OnClientCommand.Add(onClientCommand)
-print("[StartingKit-Server] hook registered (v1.5)")
+print("[StartingKit-Server] hook registered (v1.6)")
