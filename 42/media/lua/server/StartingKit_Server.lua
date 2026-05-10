@@ -1,12 +1,39 @@
--- v1.5 server-side: authoritative kit application.
--- Client requests via sendClientCommand("StartingKit", "applyKit", {}).
--- We apply XP + items to the player on the server side; the server then syncs to client.
--- modData flag (StartingKit_v5_serverApplied) persists in players.db, so each character
--- only gets the kit once even across reconnections. Death + reroll = new char = fresh apply.
+-- v1.7 server-side: switch from AddXP to LevelPerk loop for Body skills.
+-- v1.6 server applied AddXP(perk, 999999) but the level didn't change in-game
+-- (Strength 5 -> 5). B42 Body skills (Strength/Fitness) don't level reliably from
+-- AddXP alone -- the admin RCON `addxp` command works because it has special
+-- handling. LevelPerk is what actually increments the level integer; calling it
+-- in a loop until target reached is the canonical pattern for force-leveling.
 
-local SERVER_FLAG = "StartingKit_v6_serverApplied"
-local XP_DUMP = 999999
+local SERVER_FLAG = "StartingKit_v7_serverApplied"
+local TARGET_LEVEL = 10
+local MAX_ITERATIONS = 15
 local BATON_ID = "Base.Nightstick"
+
+local function bumpPerk(player, perk, perkName)
+    if not perk then
+        print("[StartingKit-Server] ERROR " .. perkName .. " perk is nil")
+        return
+    end
+    local pre = player:getPerkLevel(perk)
+    local current = pre
+    local iterations = 0
+    while current < TARGET_LEVEL and iterations < MAX_ITERATIONS do
+        local ok, err = pcall(function() player:LevelPerk(perk) end)
+        if not ok then
+            print("[StartingKit-Server] ERROR " .. perkName .. " LevelPerk: " .. tostring(err))
+            break
+        end
+        local newLvl = player:getPerkLevel(perk)
+        if newLvl == current then
+            print("[StartingKit-Server] WARN " .. perkName .. " LevelPerk did not advance from " .. tostring(current) .. " - aborting")
+            break
+        end
+        current = newLvl
+        iterations = iterations + 1
+    end
+    print("[StartingKit-Server] " .. perkName .. " " .. tostring(pre) .. " -> " .. tostring(current) .. " (iters=" .. tostring(iterations) .. ")")
+end
 
 local function applyKit(player)
     if not player then return end
@@ -20,30 +47,11 @@ local function applyKit(player)
 
     print("[StartingKit-Server] applying to " .. tostring(player:getUsername()))
 
-    local xp = player:getXp()
-    if xp then
-        if Perks and Perks.Strength then
-            local pre = player:getPerkLevel(Perks.Strength)
-            local ok, err = pcall(function() xp:AddXP(Perks.Strength, XP_DUMP) end)
-            local post = player:getPerkLevel(Perks.Strength)
-            if ok then
-                print("[StartingKit-Server] Strength " .. tostring(pre) .. " -> " .. tostring(post))
-            else
-                print("[StartingKit-Server] ERROR Strength: " .. tostring(err))
-            end
-        end
-        if Perks and Perks.Fitness then
-            local pre = player:getPerkLevel(Perks.Fitness)
-            local ok, err = pcall(function() xp:AddXP(Perks.Fitness, XP_DUMP) end)
-            local post = player:getPerkLevel(Perks.Fitness)
-            if ok then
-                print("[StartingKit-Server] Fitness " .. tostring(pre) .. " -> " .. tostring(post))
-            else
-                print("[StartingKit-Server] ERROR Fitness: " .. tostring(err))
-            end
-        end
+    if Perks then
+        bumpPerk(player, Perks.Strength, "Strength")
+        bumpPerk(player, Perks.Fitness, "Fitness")
     else
-        print("[StartingKit-Server] ERROR getXp() nil")
+        print("[StartingKit-Server] ERROR Perks table is nil")
     end
 
     local inv = player:getInventory()
@@ -54,6 +62,8 @@ local function applyKit(player)
         else
             print("[StartingKit-Server] ERROR Baton: " .. tostring(err))
         end
+    else
+        print("[StartingKit-Server] baton already present, skipping")
     end
 end
 
@@ -67,4 +77,4 @@ local function onClientCommand(module, command, player, args)
 end
 
 Events.OnClientCommand.Add(onClientCommand)
-print("[StartingKit-Server] hook registered (v1.6)")
+print("[StartingKit-Server] hook registered (v1.7)")
