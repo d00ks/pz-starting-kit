@@ -1,12 +1,14 @@
 -- Grants every new character 10 Strength + 10 Fitness + a Police Baton.
+-- v1.4: fix item ID. The vanilla police baton is Base.Nightstick, not Base.Baton.
+--       Bumped modData flag to v4 so chars who got Strength/Fitness from v1.3 still get the baton.
 -- v1.3: bump XP_DUMP to 999999. B42 rebalanced Body skills (Strength/Fitness) for the
---       exercise system; user reports ~450k needed to hit level 10. 50k from v1.2 only
---       crossed a few thresholds. Bumped modData flag to v3 so existing chars re-apply.
+--       exercise system; ~450k needed to hit level 10.
 -- v1.2: switched from LevelPerk loop to AddXP (LevelPerk was throwing on 2nd call in B42).
 --       wrapped each step in pcall so one failure doesn't take down the rest.
 
-local KIT_FLAG = "StartingKit_v3_applied"
-local XP_DUMP = 999999  -- well above ~450k needed for B42 body skills to hit level 10
+local KIT_FLAG = "StartingKit_v4_applied"
+local XP_DUMP = 999999
+local BATON_ID = "Base.Nightstick"
 
 local function applyKit(player)
     local md = player:getModData()
@@ -55,11 +57,11 @@ local function applyKit(player)
     -- Baton
     local inv = player:getInventory()
     if inv then
-        local count = inv:getItemCount("Base.Baton")
+        local count = inv:getItemCount(BATON_ID)
         if count == 0 then
-            local ok, err = pcall(function() inv:AddItem("Base.Baton") end)
+            local ok, err = pcall(function() inv:AddItem(BATON_ID) end)
             if ok then
-                print("[StartingKit] added Base.Baton")
+                print("[StartingKit] added " .. BATON_ID)
             else
                 print("[StartingKit] ERROR Baton AddItem: " .. tostring(err))
             end
@@ -79,4 +81,4 @@ local function giveStartingKit(playerNum, player)
 end
 
 Events.OnCreatePlayer.Add(giveStartingKit)
-print("[StartingKit] hook registered (client-side, v1.3)")
+print("[StartingKit] hook registered (client-side, v1.4)")
